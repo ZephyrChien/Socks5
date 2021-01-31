@@ -3,7 +3,9 @@
 #include <pthread.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <netdb.h>
 
+#define DNS_CACHE 128
 #define BACKLOG 1024
 #define BUFFERSIZE 2048
 
@@ -33,6 +35,27 @@
 #define REP_COMMAND_NOT_SUPPORTED 0x07
 #define REP_ADDRESS_NOT_SUPPORTED 0x08
 
+typedef struct dns_cache
+{
+    char *dname;
+    char *addr;
+} dns_cache;
+
+typedef struct dns
+{
+    pthread_mutex_t *mutex;
+    dns_cache *cache;
+    int cache_size;
+} dns;
+
+typedef struct dns_d
+{
+    dns *dnsptr;
+    char* dname;
+    char* addr;
+    int cache_size;
+} dns_d;
+
 typedef struct proxy_d
 {
     int srcfd;
@@ -41,8 +64,9 @@ typedef struct proxy_d
 
 typedef struct handle_d
 {
-    int connfd;
     s5_auth *auth;
+    dns *dnsptr;
+    int connfd;
 } handle_d;
 
 typedef struct auth_method
@@ -59,10 +83,22 @@ typedef struct request
     char*   addr;
 } request;
 
+
+// dns
+int dns_init(dns *dnsptr, pthread_mutex_t *dns_mutex);
+
+void *dns_cache_append(void *vdns_data);
+
+void *dns_cache_clear(void *vdns_data);
+
+int dns_lookup(dns *dnsptr, const char *dname, char *addr);
+
 // basic func
 int dial(const char *addr, int port);
 
 int dial6(const char *addr, int port);
+
+int dial_domain(dns *dnsptr, const char *dname, int port);
 
 int lstn(const char *addr, int port);
 
